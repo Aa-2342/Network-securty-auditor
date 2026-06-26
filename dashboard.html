@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetAudit — Network Security Auditor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg:        #0b0f14;
+    --surface:   #111820;
+    --border:    #1e2a36;
+    --text:      #c8d6e5;
+    --muted:     #4a6278;
+    --accent:    #00d4ff;
+    --critical:  #ff3b5c;
+    --high:      #ff7a30;
+    --medium:    #f5c842;
+    --low:       #6ec6ff;
+    --safe:      #3be8a0;
+    --clean:     #3be8a0;
+    --mono:      'IBM Plex Mono', monospace;
+    --sans:      'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+  }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--muted); font-weight: 400; }
+
+  .scan-time {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* ── LAYOUT ── */
+  .container { max-width: 1200px; margin: 0 auto; padding: 32px; }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-section {
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 48px;
+    text-align: center;
+    margin-bottom: 32px;
+    transition: border-color 0.2s;
+    cursor: pointer;
+  }
+  .upload-section:hover { border-color: var(--accent); }
+  .upload-section.drag-over { border-color: var(--accent); background: rgba(0,212,255,0.04); }
+
+  .upload-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+    display: block;
+  }
+  .upload-title {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .upload-sub { color: var(--muted); font-size: 13px; }
+
+  #fileInput { display: none; }
+
+  .btn {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 8px 20px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: rgba(0,212,255,0.08); }
+
+  /* ── SUMMARY CARDS ── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .card-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .card-value {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .card-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  .card.critical .card-value { color: var(--critical); }
+  .card.high     .card-value { color: var(--high); }
+  .card.up       .card-value { color: var(--accent); }
+  .card.total    .card-value { color: var(--text); }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── HOST TABLE ── */
+  .host-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 40px; }
+
+  .host-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .host-card:hover { border-color: var(--accent); }
+
+  .host-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .risk-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    min-width: 72px;
+    text-align: center;
+  }
+
+  .risk-CRITICAL { background: rgba(255,59,92,0.15);  color: var(--critical); border: 1px solid rgba(255,59,92,0.3); }
+  .risk-HIGH     { background: rgba(255,122,48,0.15); color: var(--high);     border: 1px solid rgba(255,122,48,0.3); }
+  .risk-MEDIUM   { background: rgba(245,200,66,0.1);  color: var(--medium);   border: 1px solid rgba(245,200,66,0.25); }
+  .risk-LOW      { background: rgba(110,198,255,0.1); color: var(--low);      border: 1px solid rgba(110,198,255,0.25); }
+  .risk-CLEAN    { background: rgba(59,232,160,0.1);  color: var(--safe);     border: 1px solid rgba(59,232,160,0.2); }
+
+  .host-ip {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .host-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .risk-bar-wrap {
+    width: 80px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .risk-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  .chevron {
+    color: var(--muted);
+    font-size: 12px;
+    transition: transform 0.2s;
+  }
+  .host-card.open .chevron { transform: rotate(90deg); }
+
+  /* ── FINDINGS TABLE ── */
+  .findings {
+    display: none;
+    padding: 0 20px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .host-card.open .findings { display: block; }
+
+  .findings-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .findings-table th {
+    text-align: left;
+    color: var(--muted);
+    font-weight: 400;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .findings-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(30,42,54,0.5);
+    vertical-align: middle;
+  }
+  .findings-table tr:last-child td { border-bottom: none; }
+
+  .port-num {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .service-name { color: var(--text); }
+  .finding-reason { color: var(--muted); font-size: 11px; }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center;
+    padding: 80px 32px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 16px; display: block; }
+  .empty-title { font-family: var(--mono); color: var(--text); margin-bottom: 8px; }
+
+  /* ── DEMO BUTTON ── */
+  .demo-btn {
+    margin-top: 12px;
+    padding: 8px 20px;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .demo-btn:hover { background: rgba(0,212,255,0.15); }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 20px 32px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Net<span>Audit</span> <span style="font-size:11px">// Network Security Auditor</span></div>
+  <div class="scan-time" id="scanTime">No report loaded</div>
+</header>
+
+<div class="container">
+
+  <!-- Upload Zone -->
+  <div class="upload-section" id="dropZone">
+    <span class="upload-icon">📡</span>
+    <div class="upload-title">Load Audit Report</div>
+    <div class="upload-sub">Drop your <code>audit_report_*.json</code> file here</div>
+    <button class="btn" onclick="document.getElementById('fileInput').click()">Browse File</button>
+    <input type="file" id="fileInput" accept=".json">
+    <br>
+    <button class="demo-btn" onclick="loadDemo()">▶ Load Demo Report</button>
+  </div>
+
+  <!-- Dashboard (hidden until data loaded) -->
+  <div id="dashboard" style="display:none">
+
+    <div class="summary-grid" id="summaryGrid"></div>
+
+    <div class="section-title">Host Findings — sorted by risk</div>
+    <div class="host-list" id="hostList"></div>
+
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty" id="emptyState" style="display:none">
+    <span class="empty-icon">✅</span>
+    <div class="empty-title">No hosts found in report</div>
+    <div>Run the scanner and reload the report.</div>
+  </div>
+
+</div>
+
+<footer>NetAudit v1.0 · Built by Ahmed · Network Security Auditor Project</footer>
+
+<script>
+// ── File Load ──────────────────────────────
+document.getElementById('fileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) readFile(file);
+});
+
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) readFile(file);
+});
+
+function readFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      renderDashboard(data);
+    } catch {
+      alert('Invalid JSON file.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── Demo Data ──────────────────────────────
+function loadDemo() {
+  const demo = {
+    network: "192.168.1.0/24",
+    scan_time: new Date().toISOString(),
+    total_scanned: 20,
+    hosts_up: 7,
+    hosts_down: 13,
+    risky_hosts: 3,
+    hosts: [
+      {
+        ip: "192.168.1.1", status: "up", overall_risk: "CRITICAL", risk_score: 85,
+        open_ports: [23, 21, 80, 443],
+        findings: [
+          { port: 23,  service: "Telnet", risk: "HIGH",   reason: "Unencrypted remote access — easily intercepted" },
+          { port: 21,  service: "FTP",    risk: "HIGH",   reason: "Transfers data in plaintext — credentials exposed" },
+          { port: 80,  service: "HTTP",   risk: "MEDIUM", reason: "Unencrypted web traffic — use HTTPS instead" },
+          { port: 443, service: "HTTPS",  risk: "SAFE",   reason: "Encrypted / standard protocol" }
+        ]
+      },
+      {
+        ip: "192.168.1.5", status: "up", overall_risk: "HIGH", risk_score: 60,
+        open_ports: [445, 139, 22],
+        findings: [
+          { port: 445, service: "SMB",     risk: "HIGH",   reason: "EternalBlue / ransomware attack vector" },
+          { port: 139, service: "NetBIOS", risk: "MEDIUM", reason: "Legacy Windows sharing — information disclosure risk" },
+          { port: 22,  service: "SSH",     risk: "SAFE",   reason: "Encrypted / standard protocol" }
+        ]
+      },
+      {
+        ip: "192.168.1.10", status: "up", overall_risk: "HIGH", risk_score: 45,
+        open_ports: [3389, 443],
+        findings: [
+          { port: 3389, service: "RDP",   risk: "HIGH", reason: "Remote Desktop exposed — BlueKeep / brute force" },
+          { port: 443,  service: "HTTPS", risk: "SAFE", reason: "Encrypted / standard protocol" }
+        ]
+      },
+      {
+        ip: "192.168.1.20", status: "up", overall_risk: "MEDIUM", risk_score: 20,
+        open_ports: [80, 22, 443],
+        findings: [
+          { port: 80,  service: "HTTP",  risk: "MEDIUM", reason: "Unencrypted web traffic — use HTTPS instead" },
+          { port: 22,  service: "SSH",   risk: "SAFE",   reason: "Encrypted / standard protocol" },
+          { port: 443, service: "HTTPS", risk: "SAFE",   reason: "Encrypted / standard protocol" }
+        ]
+      },
+      {
+        ip: "192.168.1.30", status: "up", overall_risk: "CLEAN", risk_score: 0,
+        open_ports: [22, 443],
+        findings: [
+          { port: 22,  service: "SSH",   risk: "SAFE", reason: "Encrypted / standard protocol" },
+          { port: 443, service: "HTTPS", risk: "SAFE", reason: "Encrypted / standard protocol" }
+        ]
+      },
+      {
+        ip: "192.168.1.50", status: "up", overall_risk: "CLEAN", risk_score: 0,
+        open_ports: [443],
+        findings: [
+          { port: 443, service: "HTTPS", risk: "SAFE", reason: "Encrypted / standard protocol" }
+        ]
+      },
+      {
+        ip: "192.168.1.100", status: "up", overall_risk: "MEDIUM", risk_score: 15,
+        open_ports: [3306, 22],
+        findings: [
+          { port: 3306, service: "MySQL", risk: "HIGH",  reason: "Database port exposed — brute force risk" },
+          { port: 22,   service: "SSH",   risk: "SAFE",  reason: "Encrypted / standard protocol" }
+        ]
+      }
+    ]
+  };
+  renderDashboard(demo);
+}
+
+// ── Render ──────────────────────────────────
+function renderDashboard(data) {
+  document.getElementById('dropZone').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+
+  const hosts = data.hosts || [];
+  const upHosts = hosts.filter(h => h.status === 'up');
+  const criticalCount = upHosts.filter(h => h.overall_risk === 'CRITICAL').length;
+  const highCount = upHosts.filter(h => h.overall_risk === 'HIGH').length;
+
+  // Scan time
+  if (data.scan_time) {
+    const d = new Date(data.scan_time);
+    document.getElementById('scanTime').textContent =
+      `Scanned: ${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+  }
+
+  // Summary cards
+  const grid = document.getElementById('summaryGrid');
+  grid.innerHTML = `
+    <div class="card total">
+      <div class="card-label">Hosts Scanned</div>
+      <div class="card-value">${hosts.length}</div>
+      <div class="card-sub">${data.network || ''}</div>
+    </div>
+    <div class="card up">
+      <div class="card-label">Hosts Up</div>
+      <div class="card-value">${upHosts.length}</div>
+      <div class="card-sub">${hosts.length - upHosts.length} unreachable</div>
+    </div>
+    <div class="card critical">
+      <div class="card-label">Critical Risk</div>
+      <div class="card-value">${criticalCount}</div>
+      <div class="card-sub">Immediate action needed</div>
+    </div>
+    <div class="card high">
+      <div class="card-label">High Risk</div>
+      <div class="card-value">${highCount}</div>
+      <div class="card-sub">Remediate soon</div>
+    </div>
+  `;
+
+  // Host list
+  const list = document.getElementById('hostList');
+  if (upHosts.length === 0) {
+    document.getElementById('emptyState').style.display = 'block';
+    list.innerHTML = '';
+    return;
+  }
+
+  const sorted = [...upHosts].sort((a, b) => (b.risk_score || 0) - (a.risk_score || 0));
+
+  list.innerHTML = sorted.map((host, i) => {
+    const score = host.risk_score || 0;
+    const riskColor = {
+      CRITICAL: '#ff3b5c', HIGH: '#ff7a30', MEDIUM: '#f5c842',
+      LOW: '#6ec6ff', CLEAN: '#3be8a0'
+    }[host.overall_risk] || '#4a6278';
+
+    const findingsRows = (host.findings || []).map(f => `
+      <tr>
+        <td><span class="port-num">${f.port}</span></td>
+        <td><span class="service-name">${f.service}</span></td>
+        <td><span class="risk-badge risk-${f.risk}">${f.risk}</span></td>
+        <td class="finding-reason">${f.reason}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <div class="host-card" id="host-${i}">
+        <div class="host-header" onclick="toggleHost(${i})">
+          <span class="risk-badge risk-${host.overall_risk}">${host.overall_risk}</span>
+          <span class="host-ip">${host.ip}</span>
+          <span class="host-meta">${host.open_ports?.length || 0} ports open</span>
+          <div class="risk-bar-wrap">
+            <div class="risk-bar" style="width:${score}%;background:${riskColor}"></div>
+          </div>
+          <span class="host-meta">${score}/100</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="findings">
+          ${findingsRows ? `
+          <table class="findings-table">
+            <thead>
+              <tr>
+                <th>Port</th><th>Service</th><th>Risk</th><th>Reason</th>
+              </tr>
+            </thead>
+            <tbody>${findingsRows}</tbody>
+          </table>` : '<div style="color:var(--safe);padding:12px 0;font-family:var(--mono);font-size:12px">✓ No dangerous ports found</div>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleHost(i) {
+  document.getElementById(`host-${i}`).classList.toggle('open');
+}
+</script>
+</body>
+</html>
