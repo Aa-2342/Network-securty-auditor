@@ -1,0 +1,15 @@
+{
+  "network": "172.20.10.3",
+  "hosts": [
+    {
+      "ip": "172.20.10.3",
+      "status": "down",
+      "open_ports": [],
+      "findings": [],
+      "risk_score": 0,
+      "overall_risk": "CLEAN",
+      "scanned_at": "2026-06-26T07:29:07.159453"
+    }
+  ],
+  "scan_time": "2026-06-26T07:29:07.159490"
+}
