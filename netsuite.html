@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetSuite — Network Visibility & Security Platform</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+  :root {
+    --bg: #0b0f14; --surface: #111820; --border: #1e2a36;
+    --text: #c8d6e5; --muted: #4a6278; --accent: #00d4ff;
+    --critical: #ff3b5c; --high: #ff7a30; --medium: #f5c842;
+    --low: #6ec6ff; --safe: #3be8a0; --purple: #a78bfa;
+    --mono: 'IBM Plex Mono', monospace; --sans: 'Inter', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; }
+
+  header { border-bottom: 1px solid var(--border); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; background: var(--surface); }
+  .logo { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--accent); }
+  .logo span { color: var(--muted); font-weight: 400; }
+  .scan-time { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  .container { max-width: 1300px; margin: 0 auto; padding: 32px; }
+
+  .upload-section { border: 1px dashed var(--border); border-radius: 8px; padding: 48px; text-align: center; margin-bottom: 32px; cursor: pointer; transition: border-color 0.2s; }
+  .upload-section:hover { border-color: var(--accent); }
+  .upload-icon { font-size: 40px; margin-bottom: 12px; display: block; }
+  .upload-title { font-family: var(--mono); font-size: 14px; color: var(--accent); margin-bottom: 6px; }
+  .upload-sub { color: var(--muted); font-size: 13px; }
+  #fileInput { display: none; }
+  .btn { display: inline-block; margin-top: 16px; padding: 8px 20px; background: transparent; border: 1px solid var(--accent); color: var(--accent); font-family: var(--mono); font-size: 12px; border-radius: 4px; cursor: pointer; }
+  .demo-btn { margin-top: 12px; padding: 8px 20px; background: rgba(0,212,255,0.08); border: 1px solid var(--accent); color: var(--accent); font-family: var(--mono); font-size: 12px; border-radius: 4px; cursor: pointer; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .card-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+  .card-value { font-family: var(--mono); font-size: 30px; font-weight: 600; }
+  .card-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .c-blue .card-value { color: var(--accent); }
+  .c-red .card-value { color: var(--critical); }
+  .c-orange .card-value { color: var(--high); }
+  .c-green .card-value { color: var(--safe); }
+
+  .section-title { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+  /* Topology */
+  .topology-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 32px; overflow: hidden; }
+  #topoCanvas { width: 100%; height: 420px; display: block; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; padding: 14px 20px; border-top: 1px solid var(--border); }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Device list */
+  .device-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+  .device-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: border-color 0.15s; }
+  .device-card:hover { border-color: var(--accent); }
+  .device-header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; cursor: pointer; }
+  .device-icon { font-size: 20px; }
+  .device-ip { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--accent); flex: 1; }
+  .device-type { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .risk-badge { font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 3px; min-width: 72px; text-align: center; }
+  .risk-CRITICAL { background: rgba(255,59,92,0.15); color: var(--critical); border: 1px solid rgba(255,59,92,0.3); }
+  .risk-HIGH     { background: rgba(255,122,48,0.15); color: var(--high);     border: 1px solid rgba(255,122,48,0.3); }
+  .risk-MEDIUM   { background: rgba(245,200,66,0.1);  color: var(--medium);   border: 1px solid rgba(245,200,66,0.25); }
+  .risk-LOW      { background: rgba(110,198,255,0.1); color: var(--low);      border: 1px solid rgba(110,198,255,0.25); }
+  .risk-CLEAN    { background: rgba(59,232,160,0.1);  color: var(--safe);     border: 1px solid rgba(59,232,160,0.2); }
+  .risk-bar-wrap { width: 80px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .risk-bar { height: 100%; border-radius: 2px; }
+  .chevron { color: var(--muted); font-size: 12px; transition: transform 0.2s; }
+  .device-card.open .chevron { transform: rotate(90deg); }
+
+  .findings { display: none; padding: 0 20px 16px; border-top: 1px solid var(--border); }
+  .device-card.open .findings { display: block; }
+  .findings-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-family: var(--mono); font-size: 12px; }
+  .findings-table th { text-align: left; color: var(--muted); font-weight: 400; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 10px; text-transform: uppercase; }
+  .findings-table td { padding: 8px 10px; border-bottom: 1px solid rgba(30,42,54,0.5); }
+  .findings-table tr:last-child td { border-bottom: none; }
+  .port-num { color: var(--accent); font-weight: 600; }
+  .reason { color: var(--muted); font-size: 11px; }
+
+  footer { border-top: 1px solid var(--border); padding: 20px 32px; font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Net<span>Suite</span> <span style="font-size:11px">// Network Visibility & Security Platform</span></div>
+  <div class="scan-time" id="scanTime">No report loaded</div>
+</header>
+
+<div class="container">
+  <div class="upload-section" id="dropZone">
+    <span class="upload-icon">🛡️</span>
+    <div class="upload-title">Load NetSuite Report</div>
+    <div class="upload-sub">Drop your <code>netsuite_report_*.json</code> file here</div>
+    <button class="btn" onclick="document.getElementById('fileInput').click()">Browse File</button>
+    <input type="file" id="fileInput" accept=".json">
+    <br>
+    <button class="demo-btn" onclick="loadDemo()">▶ Load Demo Report</button>
+  </div>
+
+  <div id="dashboard" style="display:none">
+    <div class="summary-grid" id="summaryGrid"></div>
+    <div class="section-title">Network Topology — Devices sorted by Risk</div>
+    <div class="topology-wrap">
+      <canvas id="topoCanvas"></canvas>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="section-title">Security Findings — per Device</div>
+    <div class="device-list" id="deviceList"></div>
+  </div>
+</div>
+
+<footer>NetSuite v1.0 · Built by Ahmed Al-Ghamdi · Network Visibility & Security Platform</footer>
+
+<script>
+const RISK_COLORS = { CRITICAL: '#ff3b5c', HIGH: '#ff7a30', MEDIUM: '#f5c842', LOW: '#6ec6ff', CLEAN: '#3be8a0' };
+const DEVICE_COLORS = { "Router/Firewall": "#00d4ff", "Windows PC": "#a78bfa", "Linux Server": "#3be8a0", "Printer": "#f5c842", "IP Camera": "#ff7a30", "Switch": "#00d4ff", "Database Server": "#ff3b5c", "Unknown Device": "#4a6278" };
+const DEVICE_ICONS  = { "Router/Firewall": "🌐", "Windows PC": "💻", "Linux Server": "🖥️", "Printer": "🖨️", "IP Camera": "📷", "Switch": "🔀", "Database Server": "🗄️", "Unknown Device": "❓" };
+
+document.getElementById('fileInput').addEventListener('change', e => { if (e.target.files[0]) readFile(e.target.files[0]); });
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'var(--accent)'; });
+dz.addEventListener('dragleave', () => { dz.style.borderColor = ''; });
+dz.addEventListener('drop', e => { e.preventDefault(); dz.style.borderColor = ''; if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); });
+
+function readFile(file) {
+  const r = new FileReader();
+  r.onload = e => { try { renderDashboard(JSON.parse(e.target.result)); } catch { alert('Invalid JSON'); } };
+  r.readAsText(file);
+}
+
+function loadDemo() {
+  renderDashboard({
+    network: "192.168.1.0/24", scan_time: new Date().toISOString(),
+    total_scanned: 50, hosts_up: 7, risky_hosts: 3,
+    devices: [
+      { ip: "192.168.1.1",  hostname: "gateway.local",  device_type: "Router/Firewall", risk_level: "CRITICAL", risk_score: 85, open_ports: [23,21,80,443], findings: [{ port:23, service:"Telnet", risk:"HIGH", reason:"Unencrypted remote access" },{ port:21, service:"FTP", risk:"HIGH", reason:"Plaintext file transfer" },{ port:80, service:"HTTP", risk:"MEDIUM", reason:"Unencrypted web traffic" },{ port:443, service:"HTTPS", risk:"SAFE", reason:"Encrypted" }] },
+      { ip: "192.168.1.5",  hostname: "WIN-PC-01",      device_type: "Windows PC",      risk_level: "HIGH",     risk_score: 60, open_ports: [445,139,22],   findings: [{ port:445, service:"SMB", risk:"HIGH", reason:"EternalBlue attack vector" },{ port:139, service:"NetBIOS", risk:"MEDIUM", reason:"Info disclosure" },{ port:22, service:"SSH", risk:"SAFE", reason:"Encrypted" }] },
+      { ip: "192.168.1.10", hostname: "WIN-PC-02",      device_type: "Windows PC",      risk_level: "HIGH",     risk_score: 45, open_ports: [3389,443],      findings: [{ port:3389, service:"RDP", risk:"HIGH", reason:"Remote Desktop exposed" },{ port:443, service:"HTTPS", risk:"SAFE", reason:"Encrypted" }] },
+      { ip: "192.168.1.20", hostname: "ubuntu-server",  device_type: "Linux Server",    risk_level: "MEDIUM",   risk_score: 15, open_ports: [80,22,443],     findings: [{ port:80, service:"HTTP", risk:"MEDIUM", reason:"Unencrypted web traffic" },{ port:22, service:"SSH", risk:"SAFE", reason:"Encrypted" }] },
+      { ip: "192.168.1.30", hostname: "db-server",      device_type: "Database Server", risk_level: "HIGH",     risk_score: 30, open_ports: [3306,22],       findings: [{ port:3306, service:"MySQL", risk:"HIGH", reason:"Database exposed" },{ port:22, service:"SSH", risk:"SAFE", reason:"Encrypted" }] },
+      { ip: "192.168.1.50", hostname: "printer-office", device_type: "Printer",         risk_level: "CLEAN",    risk_score: 0,  open_ports: [515,9100],      findings: [] },
+      { ip: "192.168.1.60", hostname: "cam-entrance",   device_type: "IP Camera",       risk_level: "MEDIUM",   risk_score: 15, open_ports: [80,554],        findings: [{ port:80, service:"HTTP", risk:"MEDIUM", reason:"Unencrypted web traffic" }] },
+    ]
+  });
+}
+
+function renderDashboard(data) {
+  document.getElementById('dropZone').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  const devices = data.devices || [];
+  if (data.scan_time) document.getElementById('scanTime').textContent = `Scanned: ${new Date(data.scan_time).toLocaleString()}`;
+
+  const critical = devices.filter(d => d.risk_level === 'CRITICAL').length;
+  const high     = devices.filter(d => d.risk_level === 'HIGH').length;
+
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="card c-blue"><div class="card-label">Hosts Scanned</div><div class="card-value">${data.total_scanned || devices.length}</div><div class="card-sub">${data.network}</div></div>
+    <div class="card c-green"><div class="card-label">Devices Up</div><div class="card-value">${devices.length}</div><div class="card-sub">Active on network</div></div>
+    <div class="card c-red"><div class="card-label">Critical Risk</div><div class="card-value">${critical}</div><div class="card-sub">Immediate action</div></div>
+    <div class="card c-orange"><div class="card-label">High Risk</div><div class="card-value">${high}</div><div class="card-sub">Remediate soon</div></div>
+  `;
+
+  drawTopology(devices);
+  renderDevices(devices);
+}
+
+function drawTopology(devices) {
+  const canvas = document.getElementById('topoCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth; canvas.height = 420;
+  ctx.fillStyle = '#111820'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  if (!devices.length) return;
+
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  const radius = Math.min(cx, cy) - 80;
+  const gateway = devices.find(d => d.device_type === 'Router/Firewall') || devices[0];
+  const others  = devices.filter(d => d !== gateway);
+
+  others.forEach((d, i) => {
+    const angle = (i / others.length) * Math.PI * 2 - Math.PI / 2;
+    const x = cx + Math.cos(angle) * radius, y = cy + Math.sin(angle) * radius;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y);
+    ctx.strokeStyle = `${RISK_COLORS[d.risk_level]}33`; ctx.lineWidth = 1.5;
+    ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+  });
+
+  drawNode(ctx, cx, cy, gateway, true);
+  others.forEach((d, i) => {
+    const angle = (i / others.length) * Math.PI * 2 - Math.PI / 2;
+    drawNode(ctx, cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius, d, false);
+  });
+
+  const types = [...new Set(devices.map(d => d.device_type))];
+  document.getElementById('legend').innerHTML = types.map(t => `
+    <div class="legend-item"><div class="legend-dot" style="background:${DEVICE_COLORS[t]||'#4a6278'}"></div>${DEVICE_ICONS[t]||'❓'} ${t}</div>
+  `).join('');
+}
+
+function drawNode(ctx, x, y, d, isGateway) {
+  const rColor = RISK_COLORS[d.risk_level] || '#4a6278';
+  const dColor = DEVICE_COLORS[d.device_type] || '#4a6278';
+  const size = isGateway ? 30 : 20;
+  ctx.shadowColor = rColor; ctx.shadowBlur = isGateway ? 20 : 10;
+  ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI*2);
+  ctx.fillStyle = isGateway ? dColor : dColor+'33'; ctx.fill();
+  ctx.strokeStyle = rColor; ctx.lineWidth = 2; ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.font = `${isGateway?16:12}px serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(DEVICE_ICONS[d.device_type]||'❓', x, y);
+  ctx.font = '10px IBM Plex Mono,monospace'; ctx.fillStyle = '#c8d6e5'; ctx.textBaseline = 'top';
+  ctx.fillText(d.ip, x, y + size + 5);
+}
+
+function renderDevices(devices) {
+  document.getElementById('deviceList').innerHTML = devices.map((d, i) => {
+    const score = d.risk_score || 0;
+    const rColor = RISK_COLORS[d.risk_level] || '#4a6278';
+    const rows = (d.findings||[]).map(f => `
+      <tr>
+        <td><span class="port-num">${f.port}</span></td>
+        <td>${f.service}</td>
+        <td><span class="risk-badge risk-${f.risk}">${f.risk}</span></td>
+        <td class="reason">${f.reason}</td>
+      </tr>`).join('');
+
+    return `
+      <div class="device-card" id="dc-${i}">
+        <div class="device-header" onclick="toggle(${i})">
+          <span class="device-icon">${DEVICE_ICONS[d.device_type]||'❓'}</span>
+          <span class="device-ip">${d.ip}</span>
+          <span class="device-type">${d.device_type} · ${d.hostname||'Unknown'}</span>
+          <span class="risk-badge risk-${d.risk_level}">${d.risk_level}</span>
+          <div class="risk-bar-wrap"><div class="risk-bar" style="width:${score}%;background:${rColor}"></div></div>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${score}/100</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="findings">
+          ${rows ? `<table class="findings-table"><thead><tr><th>Port</th><th>Service</th><th>Risk</th><th>Reason</th></tr></thead><tbody>${rows}</tbody></table>`
+                 : '<div style="color:var(--safe);padding:12px 0;font-family:var(--mono);font-size:12px">✓ No dangerous ports found</div>'}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggle(i) { document.getElementById(`dc-${i}`).classList.toggle('open'); }
+</script>
+</body>
+</html>
