@@ -3,545 +3,535 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NetAudit — Network Security Auditor</title>
+<title>NetMind — AI Network Troubleshooter</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap');
-
   :root {
-    --bg:        #0b0f14;
-    --surface:   #111820;
-    --border:    #1e2a36;
-    --text:      #c8d6e5;
-    --muted:     #4a6278;
-    --accent:    #00d4ff;
-    --critical:  #ff3b5c;
-    --high:      #ff7a30;
-    --medium:    #f5c842;
-    --low:       #6ec6ff;
-    --safe:      #3be8a0;
-    --clean:     #3be8a0;
-    --mono:      'IBM Plex Mono', monospace;
-    --sans:      'Inter', sans-serif;
+    --bg: #0b0f14; --surface: #111820; --border: #1e2a36;
+    --text: #c8d6e5; --muted: #4a6278; --accent: #00d4ff;
+    --green: #3be8a0; --orange: #ff7a30; --red: #ff3b5c;
+    --purple: #a78bfa; --yellow: #f5c842;
+    --mono: 'IBM Plex Mono', monospace; --sans: 'Inter', sans-serif;
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; min-height: 100vh; }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 14px;
-    line-height: 1.6;
-    min-height: 100vh;
-  }
-
-  /* ── HEADER ── */
-  header {
-    border-bottom: 1px solid var(--border);
-    padding: 20px 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--surface);
-  }
-
-  .logo {
-    font-family: var(--mono);
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--accent);
-    letter-spacing: -0.5px;
-  }
+  header { border-bottom: 1px solid var(--border); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; background: var(--surface); }
+  .logo { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--accent); }
   .logo span { color: var(--muted); font-weight: 400; }
+  .ai-badge { font-family: var(--mono); font-size: 10px; background: rgba(167,139,250,0.15); border: 1px solid rgba(167,139,250,0.3); color: var(--purple); padding: 4px 10px; border-radius: 20px; }
+  .ai-toggle-wrap { display: flex; align-items: center; gap: 8px; padding: 0 20px 12px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .ai-toggle-wrap input { accent-color: var(--accent); cursor: pointer; }
+  .ai-toggle-wrap label { cursor: pointer; }
+  .ai-status { font-family: var(--mono); font-size: 10px; padding: 2px 8px; border-radius: 10px; }
+  .ai-status.on { background: rgba(167,139,250,0.15); color: var(--purple); border: 1px solid rgba(167,139,250,0.3); }
+  .ai-status.off { background: rgba(74,98,120,0.15); color: var(--muted); border: 1px solid var(--border); }
 
-  .scan-time {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 32px; }
 
-  /* ── LAYOUT ── */
-  .container { max-width: 1200px; margin: 0 auto; padding: 32px; }
+  /* Chat Interface */
+  .chat-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 32px; }
+  .chat-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .ai-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #a78bfa, #00d4ff); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .chat-title { font-family: var(--mono); font-size: 13px; color: var(--text); }
+  .chat-sub { font-size: 11px; color: var(--muted); }
 
-  /* ── UPLOAD ZONE ── */
-  .upload-section {
-    border: 1px dashed var(--border);
-    border-radius: 8px;
-    padding: 48px;
-    text-align: center;
-    margin-bottom: 32px;
-    transition: border-color 0.2s;
-    cursor: pointer;
-  }
+  .chat-messages { padding: 20px; min-height: 200px; max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .msg { display: flex; gap: 10px; }
+  .msg.user { flex-direction: row-reverse; }
+  .msg-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+  .msg.ai .msg-avatar { background: linear-gradient(135deg, #a78bfa, #00d4ff); }
+  .msg.user .msg-avatar { background: var(--border); }
+  .msg-bubble { max-width: 75%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6; }
+  .msg.ai .msg-bubble { background: rgba(0,212,255,0.06); border: 1px solid var(--border); }
+  .msg.user .msg-bubble { background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.2); }
+
+  .chat-input-wrap { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+  .device-select { background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 12px; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+  .chat-input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--sans); font-size: 13px; padding: 10px 14px; border-radius: 6px; outline: none; transition: border-color 0.2s; }
+  .chat-input:focus { border-color: var(--accent); }
+  .chat-input::placeholder { color: var(--muted); }
+  .send-btn { background: var(--accent); border: none; color: var(--bg); font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 10px 18px; border-radius: 6px; cursor: pointer; transition: opacity 0.2s; }
+  .send-btn:hover { opacity: 0.85; }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Log Analyzer */
+  .log-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 32px; }
+  .log-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .log-title { font-family: var(--mono); font-size: 13px; color: var(--text); }
+  .log-textarea { width: 100%; background: var(--bg); border: none; color: #3be8a0; font-family: var(--mono); font-size: 12px; padding: 16px 20px; min-height: 120px; resize: vertical; outline: none; }
+  .log-textarea::placeholder { color: var(--muted); }
+  .analyze-btn { margin: 0 20px 16px; padding: 8px 20px; background: transparent; border: 1px solid var(--green); color: var(--green); font-family: var(--mono); font-size: 12px; border-radius: 4px; cursor: pointer; }
+  .analyze-btn:hover { background: rgba(59,232,160,0.08); }
+
+  /* Results */
+  .results-wrap { display: none; }
+  .section-title { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+  .diagnosis-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+  .diagnosis-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .issue-type { font-family: var(--mono); font-size: 16px; font-weight: 600; color: var(--accent); }
+  .severity-badge { font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 3px; }
+  .sev-HIGH { background: rgba(255,122,48,0.15); color: var(--orange); border: 1px solid rgba(255,122,48,0.3); }
+  .sev-MEDIUM { background: rgba(245,200,66,0.1); color: var(--yellow); border: 1px solid rgba(245,200,66,0.25); }
+  .sev-LOW { background: rgba(59,232,160,0.1); color: var(--green); border: 1px solid rgba(59,232,160,0.2); }
+
+  .diag-section { margin-bottom: 16px; }
+  .diag-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+  .cause-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(30,42,54,0.5); font-size: 13px; }
+  .cause-item:last-child { border-bottom: none; }
+  .cause-dot { color: var(--orange); margin-top: 1px; }
+
+  .cmd-block { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; }
+  .cmd-line { font-family: var(--mono); font-size: 12px; color: var(--green); padding: 3px 0; }
+  .cmd-line::before { content: "$ "; color: var(--muted); }
+
+  .solution-item { display: flex; gap: 8px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid rgba(30,42,54,0.5); }
+  .solution-item:last-child { border-bottom: none; }
+  .sol-arrow { color: var(--accent); }
+
+  .log-findings { display: flex; flex-wrap: wrap; gap: 8px; }
+  .finding-tag { font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 4px; background: rgba(255,59,92,0.1); border: 1px solid rgba(255,59,92,0.25); color: var(--red); }
+  .finding-tag.safe { background: rgba(59,232,160,0.1); border-color: rgba(59,232,160,0.2); color: var(--green); }
+
+  /* Quick Examples */
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .example-btn { font-family: var(--mono); font-size: 11px; padding: 5px 12px; background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 4px; cursor: pointer; transition: all 0.15s; }
+  .example-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Typing indicator */
+  .typing { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
+  .typing span { width: 6px; height: 6px; background: var(--muted); border-radius: 50%; animation: bounce 1.2s infinite; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+
+  /* Upload report */
+  .upload-section { border: 1px dashed var(--border); border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 32px; cursor: pointer; transition: border-color 0.2s; }
   .upload-section:hover { border-color: var(--accent); }
-  .upload-section.drag-over { border-color: var(--accent); background: rgba(0,212,255,0.04); }
-
-  .upload-icon {
-    font-size: 36px;
-    margin-bottom: 12px;
-    display: block;
-  }
-  .upload-title {
-    font-family: var(--mono);
-    font-size: 14px;
-    color: var(--accent);
-    margin-bottom: 6px;
-  }
-  .upload-sub { color: var(--muted); font-size: 13px; }
-
+  .upload-title { font-family: var(--mono); font-size: 13px; color: var(--accent); margin-bottom: 6px; }
+  .upload-sub { color: var(--muted); font-size: 12px; }
   #fileInput { display: none; }
+  .upload-btn { margin-top: 12px; padding: 6px 16px; background: transparent; border: 1px solid var(--accent); color: var(--accent); font-family: var(--mono); font-size: 11px; border-radius: 4px; cursor: pointer; }
 
-  .btn {
-    display: inline-block;
-    margin-top: 16px;
-    padding: 8px 20px;
-    background: transparent;
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    font-family: var(--mono);
-    font-size: 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .btn:hover { background: rgba(0,212,255,0.08); }
-
-  /* ── SUMMARY CARDS ── */
-  .summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 16px;
-    margin-bottom: 32px;
-  }
-
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px;
-  }
-
-  .card-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-  .card-value {
-    font-family: var(--mono);
-    font-size: 32px;
-    font-weight: 600;
-    line-height: 1;
-  }
-  .card-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
-
-  .card.critical .card-value { color: var(--critical); }
-  .card.high     .card-value { color: var(--high); }
-  .card.up       .card-value { color: var(--accent); }
-  .card.total    .card-value { color: var(--text); }
-
-  /* ── SECTION TITLE ── */
-  .section-title {
-    font-family: var(--mono);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: var(--muted);
-    margin-bottom: 16px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  /* ── HOST TABLE ── */
-  .host-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 40px; }
-
-  .host-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-    transition: border-color 0.15s;
-  }
-  .host-card:hover { border-color: var(--accent); }
-
-  .host-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 14px 20px;
-    cursor: pointer;
-    user-select: none;
-  }
-
-  .risk-badge {
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 3px;
-    letter-spacing: 0.5px;
-    min-width: 72px;
-    text-align: center;
-  }
-
-  .risk-CRITICAL { background: rgba(255,59,92,0.15);  color: var(--critical); border: 1px solid rgba(255,59,92,0.3); }
-  .risk-HIGH     { background: rgba(255,122,48,0.15); color: var(--high);     border: 1px solid rgba(255,122,48,0.3); }
-  .risk-MEDIUM   { background: rgba(245,200,66,0.1);  color: var(--medium);   border: 1px solid rgba(245,200,66,0.25); }
-  .risk-LOW      { background: rgba(110,198,255,0.1); color: var(--low);      border: 1px solid rgba(110,198,255,0.25); }
-  .risk-CLEAN    { background: rgba(59,232,160,0.1);  color: var(--safe);     border: 1px solid rgba(59,232,160,0.2); }
-
-  .host-ip {
-    font-family: var(--mono);
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text);
-    flex: 1;
-  }
-
-  .host-meta {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-  }
-
-  .risk-bar-wrap {
-    width: 80px;
-    height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .risk-bar {
-    height: 100%;
-    border-radius: 2px;
-    transition: width 0.4s ease;
-  }
-
-  .chevron {
-    color: var(--muted);
-    font-size: 12px;
-    transition: transform 0.2s;
-  }
-  .host-card.open .chevron { transform: rotate(90deg); }
-
-  /* ── FINDINGS TABLE ── */
-  .findings {
-    display: none;
-    padding: 0 20px 16px;
-    border-top: 1px solid var(--border);
-  }
-  .host-card.open .findings { display: block; }
-
-  .findings-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 12px;
-    font-family: var(--mono);
-    font-size: 12px;
-  }
-  .findings-table th {
-    text-align: left;
-    color: var(--muted);
-    font-weight: 400;
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--border);
-    font-size: 10px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-  }
-  .findings-table td {
-    padding: 8px 10px;
-    border-bottom: 1px solid rgba(30,42,54,0.5);
-    vertical-align: middle;
-  }
-  .findings-table tr:last-child td { border-bottom: none; }
-
-  .port-num {
-    color: var(--accent);
-    font-weight: 600;
-  }
-  .service-name { color: var(--text); }
-  .finding-reason { color: var(--muted); font-size: 11px; }
-
-  /* ── EMPTY STATE ── */
-  .empty {
-    text-align: center;
-    padding: 80px 32px;
-    color: var(--muted);
-  }
-  .empty-icon { font-size: 48px; margin-bottom: 16px; display: block; }
-  .empty-title { font-family: var(--mono); color: var(--text); margin-bottom: 8px; }
-
-  /* ── DEMO BUTTON ── */
-  .demo-btn {
-    margin-top: 12px;
-    padding: 8px 20px;
-    background: rgba(0,212,255,0.08);
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    font-family: var(--mono);
-    font-size: 12px;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .demo-btn:hover { background: rgba(0,212,255,0.15); }
-
-  /* ── FOOTER ── */
-  footer {
-    border-top: 1px solid var(--border);
-    padding: 20px 32px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    text-align: center;
-  }
+  footer { border-top: 1px solid var(--border); padding: 20px 32px; font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: center; }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">Net<span>Audit</span> <span style="font-size:11px">// Network Security Auditor</span></div>
-  <div class="scan-time" id="scanTime">No report loaded</div>
+  <div class="logo">Net<span>Mind</span> <span style="font-size:11px">// AI Network Troubleshooter</span></div>
+  <div class="ai-badge">🤖 AI Powered</div>
 </header>
 
 <div class="container">
 
-  <!-- Upload Zone -->
-  <div class="upload-section" id="dropZone">
-    <span class="upload-icon">📡</span>
-    <div class="upload-title">Load Audit Report</div>
-    <div class="upload-sub">Drop your <code>audit_report_*.json</code> file here</div>
-    <button class="btn" onclick="document.getElementById('fileInput').click()">Browse File</button>
-    <input type="file" id="fileInput" accept=".json">
-    <br>
-    <button class="demo-btn" onclick="loadDemo()">▶ Load Demo Report</button>
+  <!-- Chat Interface -->
+  <div class="chat-wrap">
+    <div class="chat-header">
+      <div class="ai-avatar">🤖</div>
+      <div>
+        <div class="chat-title">NetMind AI Assistant</div>
+        <div class="chat-sub">Describe your network issue in Arabic or English</div>
+      </div>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+      <div class="msg ai">
+        <div class="msg-avatar">🤖</div>
+        <div class="msg-bubble">
+          Hello! I'm NetMind, your AI network troubleshooter. Describe your network issue in Arabic or English and I'll diagnose it and provide remediation commands.<br><br>
+          <strong>مرحباً!</strong> صف لي مشكلة الشبكة وأنا أشخّصها وأعطيك الأوامر اللازمة.
+        </div>
+      </div>
+    </div>
+
+    <div style="padding: 8px 20px 0">
+      <div class="examples" id="examples">
+        <button class="example-btn" onclick="useExample(this)">الشبكة بطيئة جداً</button>
+        <button class="example-btn" onclick="useExample(this)">packet loss on VLAN 10</button>
+        <button class="example-btn" onclick="useExample(this)">لا يحصل على IP</button>
+        <button class="example-btn" onclick="useExample(this)">cannot reach gateway</button>
+        <button class="example-btn" onclick="useExample(this)">WiFi keeps disconnecting</button>
+        <button class="example-btn" onclick="useExample(this)">routing issue between VLANs</button>
+      </div>
+    </div>
+
+    <div class="ai-toggle-wrap">
+      <input type="checkbox" id="aiToggle" checked onchange="updateAIStatus()">
+      <label for="aiToggle">Use Claude AI (requires netmind_server.py running)</label>
+      <span class="ai-status on" id="aiStatusBadge">🤖 AI ON</span>
+    </div>
+
+    <div class="chat-input-wrap">
+      <select class="device-select" id="deviceSelect">
+        <option value="cisco">🔵 Cisco</option>
+        <option value="mikrotik">🟠 Mikrotik</option>
+        <option value="juniper">🔴 Juniper</option>
+        <option value="fortinet">🟢 Fortinet</option>
+      </select>
+      <input class="chat-input" id="chatInput" placeholder="Describe your network issue... / صف مشكلة الشبكة..." onkeydown="if(event.key==='Enter')sendMessage()">
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">Diagnose →</button>
+    </div>
   </div>
 
-  <!-- Dashboard (hidden until data loaded) -->
-  <div id="dashboard" style="display:none">
-
-    <div class="summary-grid" id="summaryGrid"></div>
-
-    <div class="section-title">Host Findings — sorted by risk</div>
-    <div class="host-list" id="hostList"></div>
-
+  <!-- Log Analyzer -->
+  <div class="log-wrap">
+    <div class="log-header">
+      <div class="log-title">📋 Device Log Analyzer</div>
+      <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">Paste Syslog / Event Log</div>
+    </div>
+    <textarea class="log-textarea" id="logInput" placeholder="Paste your device log here...&#10;&#10;Example:&#10;%LINK-3-UPDOWN: Interface GigabitEthernet0/1, changed state to down&#10;%SYS-5-CONFIG_I: Configured from console&#10;%OSPF-5-ADJCHG: Process 1, Nbr 10.0.0.1 on Gi0/0 from FULL to DOWN"></textarea>
+    <button class="analyze-btn" onclick="analyzeLog()">⚡ Analyze Log</button>
   </div>
 
-  <!-- Empty state -->
-  <div class="empty" id="emptyState" style="display:none">
-    <span class="empty-icon">✅</span>
-    <div class="empty-title">No hosts found in report</div>
-    <div>Run the scanner and reload the report.</div>
+  <!-- NetSuite Integration -->
+  <div class="upload-section" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-title">🔗 Import NetSuite Scan</div>
+    <div class="upload-sub">Load netsuite_report_*.json for enhanced AI analysis</div>
+    <button class="upload-btn">Browse Report</button>
+    <input type="file" id="fileInput" accept=".json" onchange="loadNetSuite(event)">
+  </div>
+
+  <!-- Results -->
+  <div class="results-wrap" id="resultsWrap">
+    <div class="section-title">AI Diagnosis Results</div>
+    <div id="diagnosisOutput"></div>
   </div>
 
 </div>
 
-<footer>NetAudit v1.0 · Built by Ahmed · Network Security Auditor Project</footer>
+<footer>NetMind v1.0 · Built by Ahmed Al-Ghamdi · AI-Powered Network Troubleshooter</footer>
 
 <script>
-// ── File Load ──────────────────────────────
-document.getElementById('fileInput').addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (file) readFile(file);
-});
+const ISSUE_PATTERNS = {
+  slow: {
+    keywords: ["slow","بطيء","بطيئة","latency","delay","تأخير","بطء"],
+    type: "Performance / High Latency",
+    severity: "MEDIUM",
+    causes: ["High bandwidth utilization on uplink","Duplex mismatch on interface","Spanning tree topology change","High CPU on network device","DNS resolution delays"],
+    solutions: ["Check interface utilization: show interfaces {interface}","Verify duplex settings: show interfaces | include duplex","Check STP: show spanning-tree detail","Monitor CPU: show processes cpu sorted"]
+  },
+  packet_loss: {
+    keywords: ["packet loss","فقدان","dropping","يسقط","ping fail","لا يرد","loss"],
+    type: "Packet Loss / Connectivity",
+    severity: "HIGH",
+    causes: ["Physical layer issue (cable/SFP)","Interface error counters increasing","QoS policy dropping packets","MTU mismatch","Routing loop"],
+    solutions: ["Check errors: show interfaces | include error","Verify MTU: show interfaces | include MTU","Check routing: show ip route {destination}","Test: ping {target} repeat 100"]
+  },
+  vlan: {
+    keywords: ["vlan","فلان","trunk","access","tagged","segmentation"],
+    type: "VLAN / Segmentation",
+    severity: "MEDIUM",
+    causes: ["VLAN not configured on switch","Trunk port not allowing VLAN","Native VLAN mismatch","Port in wrong VLAN","SVI not configured"],
+    solutions: ["Verify VLAN: show vlan brief","Check trunk: show interfaces trunk","Verify port: show interfaces {int} switchport","Check SVI: show ip interface brief | include Vlan"]
+  },
+  routing: {
+    keywords: ["route","routing","راوتينج","لا يصل","unreachable","cannot reach","gateway","وصول"],
+    type: "Routing / Reachability",
+    severity: "HIGH",
+    causes: ["Missing route in routing table","Wrong default gateway","Routing protocol not converged","ACL blocking traffic","NAT misconfiguration"],
+    solutions: ["Check route: show ip route {destination}","Verify default: show ip route 0.0.0.0","Check protocol: show ip protocols","Verify ACL: show access-lists"]
+  },
+  dhcp: {
+    keywords: ["dhcp","ip address","لا يحصل","no ip","169.254","apipa","عنوان"],
+    type: "DHCP / IP Assignment",
+    severity: "MEDIUM",
+    causes: ["DHCP server unreachable","DHCP pool exhausted","DHCP relay not configured","Rogue DHCP server","IP conflict"],
+    solutions: ["Check pool: show ip dhcp pool","View bindings: show ip dhcp binding","Check conflicts: show ip dhcp conflict","Verify relay: show run | include helper-address"]
+  },
+  wifi: {
+    keywords: ["wifi","wireless","واي فاي","لاسلكي","signal","إشارة","disconnect","ينقطع"],
+    type: "Wireless / WiFi",
+    severity: "MEDIUM",
+    causes: ["Weak signal / RF interference","Channel congestion","Authentication failure","IP address conflict","AP overloaded"],
+    solutions: ["Check AP: show ap summary","View clients: show wireless client summary","Check channel: show ap dot11 5ghz summary","Auth issues: show wireless client detail"]
+  }
+};
 
-const dropZone = document.getElementById('dropZone');
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file) readFile(file);
-});
+const CISCO_CMDS = {
+  slow: ["show interfaces","show processes cpu sorted","show spanning-tree","show ip interface brief"],
+  packet_loss: ["show interfaces","show ip route","ping {target} repeat 100","show ip interface brief"],
+  vlan: ["show vlan brief","show interfaces trunk","show spanning-tree vlan {id}","show ip interface brief"],
+  routing: ["show ip route","show ip protocols","show access-lists","traceroute {target}"],
+  dhcp: ["show ip dhcp pool","show ip dhcp binding","show ip dhcp conflict","show run | include helper"],
+  wifi: ["show ap summary","show wireless client summary","show wireless statistics","show ap dot11 5ghz summary"],
+  general: ["show ip interface brief","show interfaces","show logging","show version"]
+};
 
-function readFile(file) {
+const NETMIND_SERVER = "http://network-securty-auditor-production.up.railway.app";
+let lastAIDiagnosis = "";
+
+function updateAIStatus() {
+  const on = document.getElementById('aiToggle').checked;
+  const badge = document.getElementById('aiStatusBadge');
+  badge.textContent = on ? '🤖 AI ON' : '📋 Local Mode';
+  badge.className = `ai-status ${on ? 'on' : 'off'}`;
+}
+
+function simpleMarkdown(text) {
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^### (.*$)/gim, '<div style="font-family:var(--mono);color:var(--accent);font-size:12px;margin-top:10px">$1</div>')
+    .replace(/^## (.*$)/gim, '<div style="font-family:var(--mono);color:var(--accent);font-size:13px;margin-top:12px;font-weight:600">$1</div>')
+    .replace(/^# (.*$)/gim, '<div style="font-family:var(--mono);color:var(--accent);font-size:14px;margin-top:12px;font-weight:700">$1</div>')
+    .replace(/^- (.*$)/gim, '• $1')
+    .replace(/`([^`]+)`/g, '<code style="color:var(--green);font-family:var(--mono);font-size:11px">$1</code>')
+    .replace(/\n/g, '<br>');
+}
+
+async function callServer(endpoint, payload) {
+  try {
+    const res = await fetch(`${NETMIND_SERVER}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Server error');
+    const data = await res.json();
+    return data.response;
+  } catch (err) {
+    return `⚠️ تعذر الاتصال بخادم NetMind المحلي. تأكد إنك شغّلت netmind_server.py أولاً.<br><br>Run: <code>python netmind_server.py</code>`;
+  }
+}
+
+function detectIssue(text) {
+  const lower = text.toLowerCase();
+  for (const [key, data] of Object.entries(ISSUE_PATTERNS)) {
+    if (data.keywords.some(kw => lower.includes(kw))) return key;
+  }
+  return "general";
+}
+
+function addMessage(content, isUser = false) {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = `msg ${isUser ? 'user' : 'ai'}`;
+  div.innerHTML = `
+    <div class="msg-avatar">${isUser ? '👤' : '🤖'}</div>
+    <div class="msg-bubble">${content}</div>
+  `;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function addTyping() {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.id = 'typingIndicator';
+  div.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typingIndicator');
+  if (t) t.remove();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const device = document.getElementById('deviceSelect').value;
+  const useAI = document.getElementById('aiToggle').checked;
+  addMessage(text, true);
+  input.value = '';
+  document.getElementById('sendBtn').disabled = true;
+
+  addTyping();
+
+  if (useAI) {
+    const aiResponse = await callServer('/diagnose', { description: text, device });
+    removeTyping();
+    lastAIDiagnosis = aiResponse;
+    addMessage(`<strong>🤖 AI Diagnosis (Claude):</strong><br><br>${simpleMarkdown(aiResponse)}`);
+    document.getElementById('sendBtn').disabled = false;
+    showAIDiagnosis(text, aiResponse, device);
+  } else {
+    setTimeout(() => {
+      removeTyping();
+      const issueKey = detectIssue(text);
+      const issue = ISSUE_PATTERNS[issueKey] || { type: "General Network Issue", severity: "UNKNOWN", causes: ["Requires further investigation"], solutions: ["Gather more information"] };
+      const cmds = CISCO_CMDS[issueKey] || CISCO_CMDS.general;
+
+      const response = `
+        <strong>🔍 Issue Detected:</strong> ${issue.type}<br>
+        <strong>⚠️ Severity:</strong> ${issue.severity}<br><br>
+        <strong>📋 Probable Causes:</strong><br>
+        ${issue.causes.slice(0,3).map(c => `• ${c}`).join('<br>')}<br><br>
+        <strong>💻 Diagnostic Commands (${device.charAt(0).toUpperCase()+device.slice(1)}):</strong><br>
+        <code style="font-family:var(--mono);color:var(--green);font-size:11px">${cmds.slice(0,3).join('<br>')}</code><br><br>
+        <strong>✅ Recommended Solutions:</strong><br>
+        ${issue.solutions.slice(0,3).map(s => `→ ${s}`).join('<br>')}
+      `;
+
+      addMessage(response);
+      document.getElementById('sendBtn').disabled = false;
+      showDiagnosis(text, issueKey, issue, cmds, device);
+    }, 1500);
+  }
+}
+
+function showAIDiagnosis(description, aiResponse, device) {
+  document.getElementById('resultsWrap').style.display = 'block';
+  document.getElementById('diagnosisOutput').innerHTML = `
+    <div class="diagnosis-card">
+      <div class="diagnosis-header">
+        <div class="issue-type">🤖 AI Diagnosis — Claude</div>
+        <span class="severity-badge sev-MEDIUM">${device.toUpperCase()}</span>
+      </div>
+      <div class="diag-section">
+        <div class="diag-label">User Description</div>
+        <div style="font-size:13px;color:var(--text);padding:8px 0">"${description}"</div>
+      </div>
+      <div class="diag-section" style="font-size:13px;line-height:1.8">${simpleMarkdown(aiResponse)}</div>
+      <div class="diag-section" style="display:flex;gap:10px;margin-top:16px">
+        <button class="analyze-btn" onclick="generateAITicket('${device}')">🎫 Generate Ticket</button>
+        <button class="analyze-btn" onclick="generateAIReport('${device}')">📋 Generate Report</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('resultsWrap').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function generateAITicket(device) {
+  addMessage("🎫 جاري إنشاء تذكرة الدعم...");
+  const ticket = await callServer('/ticket', {
+    description: document.getElementById('chatInput').value || "Network issue",
+    diagnosis: lastAIDiagnosis,
+    device
+  });
+  addMessage(`<strong>🎫 Support Ticket:</strong><br><br>${simpleMarkdown(ticket)}`);
+}
+
+async function generateAIReport(device) {
+  addMessage("📋 جاري إنشاء التقرير الإداري...");
+  const report = await callServer('/report', {
+    description: document.getElementById('chatInput').value || "Network issue",
+    diagnosis: lastAIDiagnosis,
+    device,
+    logFindings: []
+  });
+  addMessage(`<strong>📋 Management Report:</strong><br><br>${simpleMarkdown(report)}`);
+}
+
+function showDiagnosis(description, issueKey, issue, cmds, device) {
+  document.getElementById('resultsWrap').style.display = 'block';
+  document.getElementById('diagnosisOutput').innerHTML = `
+    <div class="diagnosis-card">
+      <div class="diagnosis-header">
+        <div class="issue-type">${issue.type || 'General Issue'}</div>
+        <span class="severity-badge sev-${issue.severity || 'MEDIUM'}">${issue.severity || 'MEDIUM'}</span>
+      </div>
+      <div class="diag-section">
+        <div class="diag-label">User Description</div>
+        <div style="font-size:13px;color:var(--text);padding:8px 0">"${description}"</div>
+      </div>
+      <div class="diag-section">
+        <div class="diag-label">Probable Causes</div>
+        ${(issue.causes||[]).map(c => `<div class="cause-item"><span class="cause-dot">▸</span>${c}</div>`).join('')}
+      </div>
+      <div class="diag-section">
+        <div class="diag-label">Diagnostic Commands — ${device.charAt(0).toUpperCase()+device.slice(1)}</div>
+        <div class="cmd-block">${cmds.map(c => `<div class="cmd-line">${c}</div>`).join('')}</div>
+      </div>
+      <div class="diag-section">
+        <div class="diag-label">Recommended Solutions</div>
+        ${(issue.solutions||[]).map(s => `<div class="solution-item"><span class="sol-arrow">→</span>${s}</div>`).join('')}
+      </div>
+    </div>
+  `;
+  document.getElementById('resultsWrap').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function analyzeLog() {
+  const log = document.getElementById('logInput').value.trim();
+  if (!log) { alert('Please paste a log first'); return; }
+
+  const useAI = document.getElementById('aiToggle').checked;
+  const device = document.getElementById('deviceSelect').value;
+
+  if (useAI) {
+    addMessage("🔐 جاري تحليل السجل أمنياً عبر Claude...");
+    const result = await callServer('/security-log', { log, device });
+    addMessage(`<strong>🔐 Security Log Analysis (Claude):</strong><br><br>${simpleMarkdown(result)}`);
+
+    document.getElementById('resultsWrap').style.display = 'block';
+    const existing = document.getElementById('diagnosisOutput').innerHTML;
+    document.getElementById('diagnosisOutput').innerHTML = existing + `
+      <div class="diagnosis-card">
+        <div class="diag-label" style="margin-bottom:12px">🔐 AI Security Log Analysis</div>
+        <div style="font-size:13px;line-height:1.8">${simpleMarkdown(result)}</div>
+      </div>
+    `;
+    return;
+  }
+
+  const patterns = {
+    "Interface Down": ["line protocol is down","link down","changed state to down"],
+    "High CPU": ["cpu utilization","cpu threshold"],
+    "Memory Warning": ["memory warning","low memory","out of memory"],
+    "Authentication Failed": ["authentication failed","login failed","invalid password"],
+    "STP Topology Change": ["topology change","spanning-tree"],
+    "DHCP Issue": ["no address","address conflict","dhcp"],
+    "Routing Adjacency Down": ["neighbor.*down","adjacency","from full to down"],
+    "Interface Error": ["input errors","output errors","crc","giants","runts"],
+  };
+
+  const logLower = log.toLowerCase();
+  const findings = [];
+  for (const [name, kws] of Object.entries(patterns)) {
+    if (kws.some(kw => logLower.includes(kw))) findings.push(name);
+  }
+
+  const safe = findings.length === 0;
+  const msg = safe
+    ? '✅ Log analysis complete — <strong>No critical issues detected.</strong> Network appears healthy.'
+    : `⚠️ Log analysis found <strong>${findings.length} issue(s):</strong><br><br>${findings.map(f => `🔴 ${f}`).join('<br>')}`;
+
+  addMessage(msg);
+
+  document.getElementById('resultsWrap').style.display = 'block';
+  const existing = document.getElementById('diagnosisOutput').innerHTML;
+  document.getElementById('diagnosisOutput').innerHTML = existing + `
+    <div class="diagnosis-card">
+      <div class="diag-label" style="margin-bottom:12px">Log Analysis Findings</div>
+      <div class="log-findings">
+        ${safe
+          ? '<span class="finding-tag safe">✓ No Issues Found</span>'
+          : findings.map(f => `<span class="finding-tag">${f}</span>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function loadNetSuite(event) {
+  const file = event.target.files[0];
+  if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
     try {
       const data = JSON.parse(e.target.result);
-      renderDashboard(data);
-    } catch {
-      alert('Invalid JSON file.');
-    }
+      const devices = data.devices || [];
+      const risky = devices.filter(d => ['CRITICAL','HIGH'].includes(d.risk_level));
+      const msg = `🔗 <strong>NetSuite Integration Active</strong><br><br>
+        Loaded scan: <strong>${data.network}</strong><br>
+        Devices: ${devices.length} | Risky: <span style="color:var(--red)">${risky.length}</span><br><br>
+        ${risky.length > 0 ? `⚠️ High-risk devices detected:<br>${risky.map(d => `• ${d.ip} — ${d.device_type} (${d.risk_level} ${d.risk_score}/100)`).join('<br>')}` : '✅ No high-risk devices found.'}`;
+      addMessage(msg);
+    } catch { alert('Invalid NetSuite report file'); }
   };
   reader.readAsText(file);
 }
 
-// ── Demo Data ──────────────────────────────
-function loadDemo() {
-  const demo = {
-    network: "192.168.1.0/24",
-    scan_time: new Date().toISOString(),
-    total_scanned: 20,
-    hosts_up: 7,
-    hosts_down: 13,
-    risky_hosts: 3,
-    hosts: [
-      {
-        ip: "192.168.1.1", status: "up", overall_risk: "CRITICAL", risk_score: 85,
-        open_ports: [23, 21, 80, 443],
-        findings: [
-          { port: 23,  service: "Telnet", risk: "HIGH",   reason: "Unencrypted remote access — easily intercepted" },
-          { port: 21,  service: "FTP",    risk: "HIGH",   reason: "Transfers data in plaintext — credentials exposed" },
-          { port: 80,  service: "HTTP",   risk: "MEDIUM", reason: "Unencrypted web traffic — use HTTPS instead" },
-          { port: 443, service: "HTTPS",  risk: "SAFE",   reason: "Encrypted / standard protocol" }
-        ]
-      },
-      {
-        ip: "192.168.1.5", status: "up", overall_risk: "HIGH", risk_score: 60,
-        open_ports: [445, 139, 22],
-        findings: [
-          { port: 445, service: "SMB",     risk: "HIGH",   reason: "EternalBlue / ransomware attack vector" },
-          { port: 139, service: "NetBIOS", risk: "MEDIUM", reason: "Legacy Windows sharing — information disclosure risk" },
-          { port: 22,  service: "SSH",     risk: "SAFE",   reason: "Encrypted / standard protocol" }
-        ]
-      },
-      {
-        ip: "192.168.1.10", status: "up", overall_risk: "HIGH", risk_score: 45,
-        open_ports: [3389, 443],
-        findings: [
-          { port: 3389, service: "RDP",   risk: "HIGH", reason: "Remote Desktop exposed — BlueKeep / brute force" },
-          { port: 443,  service: "HTTPS", risk: "SAFE", reason: "Encrypted / standard protocol" }
-        ]
-      },
-      {
-        ip: "192.168.1.20", status: "up", overall_risk: "MEDIUM", risk_score: 20,
-        open_ports: [80, 22, 443],
-        findings: [
-          { port: 80,  service: "HTTP",  risk: "MEDIUM", reason: "Unencrypted web traffic — use HTTPS instead" },
-          { port: 22,  service: "SSH",   risk: "SAFE",   reason: "Encrypted / standard protocol" },
-          { port: 443, service: "HTTPS", risk: "SAFE",   reason: "Encrypted / standard protocol" }
-        ]
-      },
-      {
-        ip: "192.168.1.30", status: "up", overall_risk: "CLEAN", risk_score: 0,
-        open_ports: [22, 443],
-        findings: [
-          { port: 22,  service: "SSH",   risk: "SAFE", reason: "Encrypted / standard protocol" },
-          { port: 443, service: "HTTPS", risk: "SAFE", reason: "Encrypted / standard protocol" }
-        ]
-      },
-      {
-        ip: "192.168.1.50", status: "up", overall_risk: "CLEAN", risk_score: 0,
-        open_ports: [443],
-        findings: [
-          { port: 443, service: "HTTPS", risk: "SAFE", reason: "Encrypted / standard protocol" }
-        ]
-      },
-      {
-        ip: "192.168.1.100", status: "up", overall_risk: "MEDIUM", risk_score: 15,
-        open_ports: [3306, 22],
-        findings: [
-          { port: 3306, service: "MySQL", risk: "HIGH",  reason: "Database port exposed — brute force risk" },
-          { port: 22,   service: "SSH",   risk: "SAFE",  reason: "Encrypted / standard protocol" }
-        ]
-      }
-    ]
-  };
-  renderDashboard(demo);
-}
-
-// ── Render ──────────────────────────────────
-function renderDashboard(data) {
-  document.getElementById('dropZone').style.display = 'none';
-  document.getElementById('dashboard').style.display = 'block';
-
-  const hosts = data.hosts || [];
-  const upHosts = hosts.filter(h => h.status === 'up');
-  const criticalCount = upHosts.filter(h => h.overall_risk === 'CRITICAL').length;
-  const highCount = upHosts.filter(h => h.overall_risk === 'HIGH').length;
-
-  // Scan time
-  if (data.scan_time) {
-    const d = new Date(data.scan_time);
-    document.getElementById('scanTime').textContent =
-      `Scanned: ${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
-  }
-
-  // Summary cards
-  const grid = document.getElementById('summaryGrid');
-  grid.innerHTML = `
-    <div class="card total">
-      <div class="card-label">Hosts Scanned</div>
-      <div class="card-value">${hosts.length}</div>
-      <div class="card-sub">${data.network || ''}</div>
-    </div>
-    <div class="card up">
-      <div class="card-label">Hosts Up</div>
-      <div class="card-value">${upHosts.length}</div>
-      <div class="card-sub">${hosts.length - upHosts.length} unreachable</div>
-    </div>
-    <div class="card critical">
-      <div class="card-label">Critical Risk</div>
-      <div class="card-value">${criticalCount}</div>
-      <div class="card-sub">Immediate action needed</div>
-    </div>
-    <div class="card high">
-      <div class="card-label">High Risk</div>
-      <div class="card-value">${highCount}</div>
-      <div class="card-sub">Remediate soon</div>
-    </div>
-  `;
-
-  // Host list
-  const list = document.getElementById('hostList');
-  if (upHosts.length === 0) {
-    document.getElementById('emptyState').style.display = 'block';
-    list.innerHTML = '';
-    return;
-  }
-
-  const sorted = [...upHosts].sort((a, b) => (b.risk_score || 0) - (a.risk_score || 0));
-
-  list.innerHTML = sorted.map((host, i) => {
-    const score = host.risk_score || 0;
-    const riskColor = {
-      CRITICAL: '#ff3b5c', HIGH: '#ff7a30', MEDIUM: '#f5c842',
-      LOW: '#6ec6ff', CLEAN: '#3be8a0'
-    }[host.overall_risk] || '#4a6278';
-
-    const findingsRows = (host.findings || []).map(f => `
-      <tr>
-        <td><span class="port-num">${f.port}</span></td>
-        <td><span class="service-name">${f.service}</span></td>
-        <td><span class="risk-badge risk-${f.risk}">${f.risk}</span></td>
-        <td class="finding-reason">${f.reason}</td>
-      </tr>
-    `).join('');
-
-    return `
-      <div class="host-card" id="host-${i}">
-        <div class="host-header" onclick="toggleHost(${i})">
-          <span class="risk-badge risk-${host.overall_risk}">${host.overall_risk}</span>
-          <span class="host-ip">${host.ip}</span>
-          <span class="host-meta">${host.open_ports?.length || 0} ports open</span>
-          <div class="risk-bar-wrap">
-            <div class="risk-bar" style="width:${score}%;background:${riskColor}"></div>
-          </div>
-          <span class="host-meta">${score}/100</span>
-          <span class="chevron">▶</span>
-        </div>
-        <div class="findings">
-          ${findingsRows ? `
-          <table class="findings-table">
-            <thead>
-              <tr>
-                <th>Port</th><th>Service</th><th>Risk</th><th>Reason</th>
-              </tr>
-            </thead>
-            <tbody>${findingsRows}</tbody>
-          </table>` : '<div style="color:var(--safe);padding:12px 0;font-family:var(--mono);font-size:12px">✓ No dangerous ports found</div>'}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function toggleHost(i) {
-  document.getElementById(`host-${i}`).classList.toggle('open');
+function useExample(btn) {
+  document.getElementById('chatInput').value = btn.textContent;
+  document.getElementById('chatInput').focus();
 }
 </script>
 </body>
