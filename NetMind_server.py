@@ -17,7 +17,8 @@ CORS(app)  # allow netmind.html (opened as a file) to call this server
 # ─────────────────────────────────────────────
 # ضع مفتاحك هنا فقط (لا تشاركه ولا ترفعه على GitHub)
 # ─────────────────────────────────────────────
-ANTHROPIC_API_KEY = "في الواتساب المفتاح"
+import os
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
 CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
 
